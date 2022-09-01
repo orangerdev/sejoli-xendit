@@ -707,9 +707,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
                 $params = json_encode($set_params);
 
-                $public_key = '';
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
-                $invoice_url        = $executeTransaction['invoice_url'];
+                
+                $invoice_url = $executeTransaction['invoice_url'];
 
                 if ( $invoice_url !== NULL ) {
 
