@@ -613,7 +613,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
         
         }
         
-        $detail = unserialize( $data_order->detail );
+        $detail = unserialize( $data_order );
 
         if( NULL === $data_order ) :
             
@@ -708,7 +708,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 $params = json_encode($set_params);
 
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
-                
+
                 $invoice_url = $executeTransaction['invoice_url'];
 
                 if ( $invoice_url !== NULL ) {
@@ -790,12 +790,12 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 $request_url = $base_url.'v2/invoices/'.$detail['id'];
 
                 $set_params = [];
-                $params     = json_encode($set_params);
+                $params     = $set_params;
 
                 $public_key = '';
                 $getTransaction = $this->getTransaction( $request_url, $params, $secret_key, $public_key );
 
-                if ($getTransaction['status'] === 'PAID' || $getTransaction['status'] === 'COMPLETED') {
+                if ($getTransaction['status'] === 'PAID' || $getTransaction['status'] === 'COMPLETED' || $getTransaction['status'] === 'SETTLED') {
 
                     $order_id = intval( $args['order_id'] );
                     $response = sejolisa_get_order( array( 'ID' => $order_id ) );
@@ -806,7 +806,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         $product = $order['product'];
 
                         // if product is need of shipment
-                        if( false !== $product->shipping['active'] ) :
+                        if( 'physical' === $product->type ) :
                             $set_status = 'in-progress';
                         else :
                             $set_status = 'completed';
@@ -937,12 +937,13 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 $request_url = $base_url.'v2/invoices/'.$detail['id'];
 
                 $set_params = [];
-                $params     = json_encode($set_params);
+                $params     = $set_params;
 
                 $public_key = '';
                 $getTransaction = $this->getTransaction( $request_url, $params, $secret_key, $public_key );
 
-                if ($getTransaction['status'] === 'PAID' || $getTransaction['status'] === 'COMPLETED') :
+
+                if ($getTransaction['status'] === 'PAID' || $getTransaction['status'] === 'COMPLETED' || $getTransaction['status'] === 'SETTLED') :
 
                     $order_id = intval( $args['order_id'] );
                     $response = sejolisa_get_order( array( 'ID' => $order_id ) );
@@ -953,18 +954,35 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         $product = $order['product'];
 
                         // if product is need of shipment
-                        if( false !== $product->shipping['active'] ) :
+                        if( 'physical' === $product->type ) :
                             $status = 'in-progress';
                         else :
                             $status = 'completed';
                         endif;
+
+                        sejolisa_update_order_meta_data($order_id, array(
+                            'xendit' => array(
+                                'status' => esc_attr($status)
+                            )
+                        ));
 
                         $update_status_order = wp_parse_args($args, [
                             'ID'     => $order_id,
                             'status' => $status
                         ]);
 
-                        sejolisa_update_order_status($update_status_order);
+                        $update_status = sejolisa_update_order_status($update_status_order);
+
+                        if( $update_status ){
+
+                            wp_redirect(add_query_arg(array(
+                                'order_id' => $order_id,
+                                'status'   => "success"
+                            ), site_url('checkout/thank-you')));
+
+                            exit();
+                            
+                        }
 
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
@@ -985,12 +1003,29 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         $product = $order['product'];
                         $status  = 'cancelled';
 
+                        sejolisa_update_order_meta_data($order_id, array(
+                            'xendit' => array(
+                                'status' => esc_attr($status)
+                            )
+                        ));
+
                         $update_status_order = wp_parse_args($args, [
                             'ID'     => $order_id,
                             'status' => $status
                         ]);
 
-                        sejolisa_update_order_status($update_status_order);
+                        $update_status = sejolisa_update_order_status($update_status_order);
+
+                        if( $update_status ){
+
+                            wp_redirect(add_query_arg(array(
+                                'order_id' => $order_id,
+                                'status'   => "failed"
+                            ), site_url('checkout/thank-you')));
+
+                            exit();
+                            
+                        }
 
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
@@ -1011,12 +1046,29 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         $product = $order['product'];
                         $status  = 'on-hold';
 
+                        sejolisa_update_order_meta_data($order_id, array(
+                            'xendit' => array(
+                                'status' => esc_attr($status)
+                            )
+                        ));
+
                         $update_status_order = wp_parse_args($args, [
                             'ID'     => $order_id,
                             'status' => $status
                         ]);
 
-                        sejolisa_update_order_status($update_status_order);
+                        $update_status = sejolisa_update_order_status($update_status_order);
+
+                        if( $update_status ){
+
+                            wp_redirect(add_query_arg(array(
+                                'order_id' => $order_id,
+                                'status'   => "pending"
+                            ), site_url('checkout/thank-you')));
+
+                            exit();
+                            
+                        }
 
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
@@ -1067,6 +1119,11 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
                 $title = __('Order telah dibatalkan', 'sejoli-xendit');
                 require 'template/checkout/order-cancelled.php';
+
+            elseif( in_array( $order['status'], array( 'completed' ) ) ) :
+
+                $title = __('Order selesai', 'sejoli-xendit');
+                require 'template/checkout/order-completed.php';
 
             else :
 
