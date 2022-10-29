@@ -35,9 +35,21 @@ add_filter('sejoli/payment/available-libraries', function( array $libraries ) {
 
 });
 
-add_action( 'plugins_loaded', 'sejoli_xendit_plugin_init' ); 
+add_action( 'plugins_loaded', 'sejoli_xendit_plugin_init' );
 function sejoli_xendit_plugin_init() {
 
     load_plugin_textdomain( 'sejoli-xendit', false, dirname(plugin_basename(__FILE__)).'/languages/' );
 
 }
+
+require plugin_dir_path( __FILE__ ) . '/third-parties/autoload.php';
+
+require_once( plugin_dir_path( __FILE__ ) . '/third-parties/yahnis-elsts/plugin-update-checker/plugin-update-checker.php');
+
+$update_checker = Puc_v4_Factory::buildUpdateChecker(
+	'https://github.com/orangerdev/sejoli-xendit',
+	__FILE__,
+	'sejoli-xendit'
+);
+
+$update_checker->setBranch('main');
