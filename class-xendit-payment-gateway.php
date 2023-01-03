@@ -765,6 +765,30 @@ final class SejoliXendit extends \SejoliSA\Payment{
     }
 
     /**
+     * Update order status based on product type ( digital or physic)
+     * It's fired when payment module confirm the order payment
+     *
+     * @since   1.0.0
+     * @param   int     $order_id
+     * @return  void
+     */
+    protected function update_order_status($order_id) {
+
+        $respond = sejolisa_get_order(['ID' => $order_id]);
+
+        if(false !== $respond['valid']) :
+            $order   = $respond['orders'];
+            $product = sejolisa_get_product($order['product_id']);
+            $status  = ('digital' === $product->type) ? 'completed' : 'in-progress';
+
+            do_action('sejoli/order/update-status',[
+                'ID'       => $order['ID'],
+                'status'   => $status
+            ]);
+        endif;
+    }
+
+    /**
      * Receive return process
      * @since   1.0.0
      * @return  void
@@ -818,10 +842,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        do_action('sejoli/order/update-status',[
-                            'ID'       => $order_id,
-                            'status'   => $set_status
-                        ]);
+                        $this->update_order_status( $order_id );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -848,10 +869,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         )
                     ));
 
-                    do_action('sejoli/order/update-status',[
-                        'ID'       => $order_id,
-                        'status'   => $set_status
-                    ]);
+                    $this->update_order_status( $order_id );
 
                     wp_redirect(add_query_arg(array(
                         'order_id' => $order_id,
@@ -869,10 +887,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         )
                     ));
 
-                    do_action('sejoli/order/update-status',[
-                        'ID'       => $order_id,
-                        'status'   => $set_status
-                    ]);
+                    $this->update_order_status( $order_id );
 
                     wp_redirect(add_query_arg(array(
                         'order_id' => $order_id,
@@ -942,10 +957,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        do_action('sejoli/order/update-status',[
-                            'ID'       => $order_id,
-                            'status'   => $status
-                        ]);
+                        $this->update_order_status( $order_id );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -977,10 +989,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        do_action('sejoli/order/update-status',[
-                            'ID'       => $order_id,
-                            'status'   => $status
-                        ]);
+                        $this->update_order_status( $order_id );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -1011,10 +1020,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
                                 'status' => esc_attr($status)
                             )
                         ));
-                        do_action('sejoli/order/update-status',[
-                            'ID'       => $order_id,
-                            'status'   => $status
-                        ]);
+                        
+                        $this->update_order_status( $order_id );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
