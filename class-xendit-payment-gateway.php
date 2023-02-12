@@ -765,6 +765,30 @@ final class SejoliXendit extends \SejoliSA\Payment{
     }
 
     /**
+     * Update order status based on product type ( digital or physic)
+     * It's fired when payment module confirm the order payment
+     *
+     * @since   1.0.0
+     * @param   int     $order_id
+     * @return  void
+     */
+    protected function update_order_status($order_id) {
+
+        $respond = sejolisa_get_order(['ID' => $order_id]);
+
+        if(false !== $respond['valid']) :
+            $order   = $respond['orders'];
+            $product = sejolisa_get_product($order['product_id']);
+            $status  = ('digital' === $product->type) ? 'completed' : 'in-progress';
+
+            do_action('sejoli/order/update-status',[
+                'ID'       => $order['ID'],
+                'status'   => $status
+            ]);
+        endif;
+    }
+
+    /**
      * Receive return process
      * @since   1.0.0
      * @return  void
@@ -818,24 +842,13 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        $update_status_order = wp_parse_args($args, [
-                            'ID'     => $order_id,
-                            'status' => $set_status
-                        ]);
+                        $this->update_order_status( $order_id );
 
-                        $update_status = sejolisa_update_order_status($update_status_order);
-
-                        if( $update_status ){
-
-                            wp_redirect(add_query_arg(array(
-                                'order_id' => $order_id,
-                                'status'   => "success"
-                            ), site_url('checkout/thank-you')));
-
-                            exit();
-                            
-                        }
-
+                        wp_redirect(add_query_arg(array(
+                            'order_id' => $order_id,
+                            'status'   => "success"
+                        ), site_url('checkout/thank-you')));
+                        
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
                     else :
@@ -856,23 +869,12 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         )
                     ));
 
-                    $update_status_order = wp_parse_args($args, [
-                        'ID'     => $order_id,
-                        'status' => $set_status
-                    ]);
+                    $this->update_order_status( $order_id );
 
-                    $update_status = sejolisa_update_order_status($update_status_order);
-
-                    if( $update_status ){
-
-                        wp_redirect(add_query_arg(array(
-                            'order_id' => $order_id,
-                            'status'   => "failed"
-                        ), site_url('checkout/thank-you')));
-
-                        exit;
-
-                    }
+                    wp_redirect(add_query_arg(array(
+                        'order_id' => $order_id,
+                        'status'   => "failed"
+                    ), site_url('checkout/thank-you')));
                     
                 } else {
                     
@@ -885,24 +887,13 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         )
                     ));
 
-                    $update_status_order = wp_parse_args($args, [
-                        'ID'     => $order_id,
-                        'status' => $set_status
-                    ]);
+                    $this->update_order_status( $order_id );
 
-                    $update_status = sejolisa_update_order_status($update_status_order);
-
-                    if( $update_status ){
-
-                        wp_redirect(add_query_arg(array(
-                            'order_id' => $order_id,
-                            'status'   => "pending"
-                        ), site_url('checkout/thank-you')));
-
-                        exit;
+                    wp_redirect(add_query_arg(array(
+                        'order_id' => $order_id,
+                        'status'   => "pending"
+                    ), site_url('checkout/thank-you')));
                         
-                    }
-
                 }
 
             endif;
@@ -966,24 +957,13 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        $update_status_order = wp_parse_args($args, [
-                            'ID'     => $order_id,
-                            'status' => $status
-                        ]);
+                        $this->update_order_status( $order_id );
 
-                        $update_status = sejolisa_update_order_status($update_status_order);
-
-                        if( $update_status ){
-
-                            wp_redirect(add_query_arg(array(
-                                'order_id' => $order_id,
-                                'status'   => "success"
-                            ), site_url('checkout/thank-you')));
-
-                            exit();
+                        wp_redirect(add_query_arg(array(
+                            'order_id' => $order_id,
+                            'status'   => "success"
+                        ), site_url('checkout/thank-you')));
                             
-                        }
-
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
                     else :
@@ -1009,23 +989,12 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        $update_status_order = wp_parse_args($args, [
-                            'ID'     => $order_id,
-                            'status' => $status
-                        ]);
+                        $this->update_order_status( $order_id );
 
-                        $update_status = sejolisa_update_order_status($update_status_order);
-
-                        if( $update_status ){
-
-                            wp_redirect(add_query_arg(array(
-                                'order_id' => $order_id,
-                                'status'   => "failed"
-                            ), site_url('checkout/thank-you')));
-
-                            exit();
-                            
-                        }
+                        wp_redirect(add_query_arg(array(
+                            'order_id' => $order_id,
+                            'status'   => "failed"
+                        ), site_url('checkout/thank-you')));
 
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
@@ -1051,25 +1020,14 @@ final class SejoliXendit extends \SejoliSA\Payment{
                                 'status' => esc_attr($status)
                             )
                         ));
+                        
+                        $this->update_order_status( $order_id );
 
-                        $update_status_order = wp_parse_args($args, [
-                            'ID'     => $order_id,
-                            'status' => $status
-                        ]);
-
-                        $update_status = sejolisa_update_order_status($update_status_order);
-
-                        if( $update_status ){
-
-                            wp_redirect(add_query_arg(array(
-                                'order_id' => $order_id,
-                                'status'   => "pending"
-                            ), site_url('checkout/thank-you')));
-
-                            exit();
+                        wp_redirect(add_query_arg(array(
+                            'order_id' => $order_id,
+                            'status'   => "pending"
+                        ), site_url('checkout/thank-you')));
                             
-                        }
-
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
 
                     else :
