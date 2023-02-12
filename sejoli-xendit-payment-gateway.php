@@ -2,14 +2,14 @@
 /**
  *
  * @link              https://ridwan-arifandi.com
- * @since             1.0.0
+ * @since             1.0.1
  * @package           Sejoli
  *
  * @wordpress-plugin
  * Plugin Name:       Sejoli - XENDIT Payment Gateway
  * Plugin URI:        https://sejoli.co.id
  * Description:       Integrate Sejoli Premium WordPress Membership Plugin with XENDIT Payment Gateway.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires PHP: 	  7.4.1
  * Author:            Sejoli
  * Author URI:        https://sejoli.co.id
