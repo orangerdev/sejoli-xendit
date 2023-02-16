@@ -629,6 +629,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
         endif;
 
+        $previx_refference = carbon_get_theme_option('xendit_inv_prefix');
+
         if( true === $request_to_xendit ) :
 
             $this->add_to_table( $order['ID'] );
@@ -636,7 +638,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
             if ( !empty( $secret_key ) ) {
 
                 $set_params = [ 
-                    'external_id'      => 'sejoli_'.$signature,
+                    'external_id'      => $previx_refference.$signature,
                     'amount'           => $payment_amount,
                     'description'      => __('Payment for Order No ', 'sejoli-xendit') . $order['ID'],
                     'payer_email'      => $order['user']->user_email,
