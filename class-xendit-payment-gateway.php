@@ -1109,7 +1109,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
     function sejoli_xendit_get_notification_content( $filename, $media = 'email', $vars = NULL ) {
         
         $content    = NULL;
-        $email_file = plugin_dir_path( __FILE__ ) . '/template/email/' . $filename . '.php';
+        $email_file = plugin_dir_path( __FILE__ ) . '/template/'.$media.'/' . $filename . '.php';
 
         if( file_exists( $email_file ) ) :
 
