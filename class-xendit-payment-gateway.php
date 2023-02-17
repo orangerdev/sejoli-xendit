@@ -1099,6 +1099,38 @@ final class SejoliXendit extends \SejoliSA\Payment{
     }
 
     /**
+     * Get email content from given template
+     * @since   1.0.0
+     * @param   string      $filename   The filename of notification
+     * @param   string      $media      Notification media, default will be email
+     * @param   null|array  $args       Parsing variables
+     * @return  null|string
+     */
+    function sejoli_xendit_get_notification_content( $filename, $media = 'email', $vars = NULL ) {
+        
+        $content    = NULL;
+        $email_file = plugin_dir_path( __FILE__ ) . '/template/email/' . $filename . '.php';
+
+        if( file_exists( $email_file ) ) :
+
+            if( is_array( $vars ) ) :
+                extract( $vars );
+            endif;
+
+            ob_start();
+           
+            require $email_file;
+            $content = ob_get_contents();
+           
+            ob_end_clean();
+            
+        endif;
+
+        return $content;
+
+    }
+
+    /**
      * Display payment instruction in notification
      * @since   1.0.0
      * @param   array    $invoice_data
@@ -1113,7 +1145,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
         endif;
 
-        $content = sejoli_get_notification_content(
+        $content = $this->sejoli_xendit_get_notification_content(
                         'xendit',
                         $media,
                         array(
