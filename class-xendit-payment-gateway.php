@@ -612,8 +612,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
             $subtotal                  = $product_price; 
         
         }
-        
-        $detail = unserialize( $data_order );
+
+        $detail = unserialize( $data_order->detail );
 
         if( NULL === $data_order ) :
             
@@ -647,7 +647,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         'given_names'   => $recipient_name,
                         'surname'       => $recipient_name,
                         'email'         => $order['user']->user_email,
-                        'mobile_number' => $order['user']->meta->phone,
+                        'mobile_number' => '',//$order['user']->meta->phone,
                         'address' => [
                             [
                                 'city'         => $receiver_city,
@@ -711,9 +711,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
 
-                $invoice_url = $executeTransaction['invoice_url'];
+                $invoice_url = !isset($executeTransaction) ? $executeTransaction['invoice_url'] : '';
 
-                if ( $invoice_url !== NULL ) {
+                if ( !is_array($executeTransaction['errors']) ) {
 
                     $http_code = 200;
 
@@ -733,24 +733,11 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 else :
 
                     do_action( 'sejoli/log/write', 'error-xendit', array( $executeTransaction, $http_code, $params ) );
-
-                    $msg = $executeTransaction['msg'];
-
-                    if ( $msg === NULL ) {
                         
-                        wp_die(
-                            __('Error!<br>Please check the following : ' . $executeTransaction, 'sejoli-xendit'),
-                            __('Error!', 'sejoli-xendit')
-                        );
-
-                    } else {
-                        
-                        wp_die(
-                            __('Error!<br>Please check the following : ' . $msg, 'sejoli-xendit'),
-                            __('Error!', 'sejoli-xendit')
-                        );
-                        
-                    }
+                    wp_die(
+                        __('Error!<br> Please check the following : ' . '<pre>' . var_export( $executeTransaction, true ) . '</pre>', 'sejoli-xendit'),
+                        __('Error!', 'sejoli-xendit')
+                    );
 
                     exit;
             
@@ -779,6 +766,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
         $respond = sejolisa_get_order(['ID' => $order_id]);
 
         if(false !== $respond['valid']) :
+            
             $order   = $respond['orders'];
             $product = sejolisa_get_product($order['product_id']);
             $status  = ('digital' === $product->type) ? 'completed' : 'in-progress';
@@ -787,7 +775,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 'ID'       => $order['ID'],
                 'status'   => $status
             ]);
+
         endif;
+
     }
 
     /**
