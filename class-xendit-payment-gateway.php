@@ -708,7 +708,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
                 $params             = json_encode($set_params);
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
-                $invoice_url        = isset($executeTransaction) ? $executeTransaction['invoice_url'] : '';
+                $inv_url            = array_key_exists('invoice_url', $executeTransaction) ? $executeTransaction['invoice_url'] : null;
+                $invoice_url        = isset($executeTransaction) ? $inv_url : '';
 
                 if ( $invoice_url ) {
 
