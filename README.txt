@@ -12,6 +12,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 * 1.0.2 *
 - Display error information messages
+- Fix error response
 
 * 1.0.1 *
 - Fix issue with notification

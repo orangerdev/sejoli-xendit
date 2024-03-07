@@ -613,10 +613,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
         
         }
 
-        $detail = unserialize( $data_order->detail );
-
         if( NULL === $data_order ) :
             
+            $detail = unserialize( $data_order->detail );
             $request_to_xendit = true;
         
         else :
@@ -707,13 +706,13 @@ final class SejoliXendit extends \SejoliSA\Payment{
                     ]
                 ];
 
-                $params = json_encode($set_params);
-
+                $params             = json_encode($set_params);
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
+                $invoice_url        = !isset($executeTransaction) ? $executeTransaction['invoice_url'] : '';
 
-                $invoice_url = !isset($executeTransaction) ? $executeTransaction['invoice_url'] : '';
+                $executeTransactionErrors = array_key_exists('errors', $executeTransaction) ? $executeTransaction['errors'] : null;
 
-                if ( !is_array($executeTransaction['errors']) ) {
+                if ( $executeTransactionErrors !== null ) {
 
                     $http_code = 200;
 
