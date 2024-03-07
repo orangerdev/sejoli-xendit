@@ -612,8 +612,6 @@ final class SejoliXendit extends \SejoliSA\Payment{
             $subtotal                  = $product_price; 
         
         }
-        
-        $detail = unserialize( $data_order );
 
         if( NULL === $data_order ) :
             
@@ -621,6 +619,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
         
         else :
 
+            $detail = unserialize( $data_order->detail );
             if( !isset( $detail['invoice_url'] ) || empty( $detail['invoice_url'] ) ) :
                 $request_to_xendit = true;
             else :
@@ -629,6 +628,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
         endif;
 
+        $previx_refference = carbon_get_theme_option('xendit_inv_prefix');
+
         if( true === $request_to_xendit ) :
 
             $this->add_to_table( $order['ID'] );
@@ -636,7 +637,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
             if ( !empty( $secret_key ) ) {
 
                 $set_params = [ 
-                    'external_id'      => 'sejoli_'.$signature,
+                    'external_id'      => $previx_refference.$signature,
                     'amount'           => $payment_amount,
                     'description'      => __('Payment for Order No ', 'sejoli-xendit') . $order['ID'],
                     'payer_email'      => $order['user']->user_email,
@@ -705,13 +706,12 @@ final class SejoliXendit extends \SejoliSA\Payment{
                     ]
                 ];
 
-                $params = json_encode($set_params);
-
+                $params             = json_encode($set_params);
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
+                $inv_url            = array_key_exists('invoice_url', $executeTransaction) ? $executeTransaction['invoice_url'] : null;
+                $invoice_url        = isset($executeTransaction) ? $inv_url : '';
 
-                $invoice_url = $executeTransaction['invoice_url'];
-
-                if ( $invoice_url !== NULL ) {
+                if ( $invoice_url ) {
 
                     $http_code = 200;
 
@@ -731,24 +731,11 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 else :
 
                     do_action( 'sejoli/log/write', 'error-xendit', array( $executeTransaction, $http_code, $params ) );
-
-                    $msg = $executeTransaction['msg'];
-
-                    if ( $msg === NULL ) {
                         
-                        wp_die(
-                            __('Error!<br>Please check the following : ' . $executeTransaction, 'sejoli-xendit'),
-                            __('Error!', 'sejoli-xendit')
-                        );
-
-                    } else {
-                        
-                        wp_die(
-                            __('Error!<br>Please check the following : ' . $msg, 'sejoli-xendit'),
-                            __('Error!', 'sejoli-xendit')
-                        );
-                        
-                    }
+                    wp_die(
+                        __('Error!<br> Please check the following : ' . '<pre>' . var_export( $executeTransaction, true ) . '</pre>', 'sejoli-xendit'),
+                        __('Error!', 'sejoli-xendit')
+                    );
 
                     exit;
             
@@ -777,6 +764,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
         $respond = sejolisa_get_order(['ID' => $order_id]);
 
         if(false !== $respond['valid']) :
+            
             $order   = $respond['orders'];
             $product = sejolisa_get_product($order['product_id']);
             $status  = ('digital' === $product->type) ? 'completed' : 'in-progress';
@@ -785,7 +773,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 'ID'       => $order['ID'],
                 'status'   => $status
             ]);
+
         endif;
+
     }
 
     /**
@@ -1097,6 +1087,38 @@ final class SejoliXendit extends \SejoliSA\Payment{
     }
 
     /**
+     * Get email content from given template
+     * @since   1.0.0
+     * @param   string      $filename   The filename of notification
+     * @param   string      $media      Notification media, default will be email
+     * @param   null|array  $args       Parsing variables
+     * @return  null|string
+     */
+    function sejoli_xendit_get_notification_content( $filename, $media = 'email', $vars = NULL ) {
+        
+        $content    = NULL;
+        $email_file = plugin_dir_path( __FILE__ ) . '/template/'.$media.'/' . $filename . '.php';
+
+        if( file_exists( $email_file ) ) :
+
+            if( is_array( $vars ) ) :
+                extract( $vars );
+            endif;
+
+            ob_start();
+           
+            require $email_file;
+            $content = ob_get_contents();
+           
+            ob_end_clean();
+            
+        endif;
+
+        return $content;
+
+    }
+
+    /**
      * Display payment instruction in notification
      * @since   1.0.0
      * @param   array    $invoice_data
@@ -1111,7 +1133,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
         endif;
 
-        $content = sejoli_get_notification_content(
+        $content = $this->sejoli_xendit_get_notification_content(
                         'xendit',
                         $media,
                         array(
