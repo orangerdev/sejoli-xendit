@@ -64,7 +64,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
             'BCA'               => __('Bank Central Asia (Virtual Account)', 'sejoli-xendit'),
             'BNI'               => __('Bank Negara Indonesia (Virtual Account)', 'sejoli-xendit'),
             'MANDIRI'           => __('Bank Mandiri (Virtual Account)', 'sejoli-xendit'),
+            'BJB'               => __('Bank BJB (Virtual Account)', 'sejoli-xendit'),
             'PERMATA'           => __('Bank Permata (Virtual Account)', 'sejoli-xendit'),
+            'CIMB'              => __('Bank CIMB (Virtual Account)', 'sejoli-xendit'),
             'SAHABAT_SAMPOERNA' => __('Bank Sahabat Sampoerna (Virtual Account)', 'sejoli-xendit'),
             'BRI'               => __('Bank Rakyat Indonesia (Virtual Account)', 'sejoli-xendit'),
             'BSI'               => __('Bank Syariah Indonesia (Virtual Account)', 'sejoli-xendit'),
@@ -74,6 +76,10 @@ final class SejoliXendit extends \SejoliSA\Payment{
             'DANA'              => __('DANA (eWallet)', 'sejoli-xendit'),
             'SHOPEEPAY'         => __('Shopee Pay (eWallet)', 'sejoli-xendit'),
             'LINKAJA'           => __('LinkAja (eWallet)', 'sejoli-xendit'),
+            'ASTRAPAY'          => __('AstraPay (eWallet)', 'sejoli-xendit'),
+            'JENIUSPAY'          => __('JeniusPay (eWallet)', 'sejoli-xendit'),
+            'AKULAKU'           => __('Akulaku (PayLater)', 'sejoli-xendit'),
+            'KREDIVO'           => __('Kredivo (PayLater)', 'sejoli-xendit'),
             'QRIS'              => __('QRIS Code', 'sejoli-xendit'),
             'CREDIT_CARD'       => __('Credit Card', 'sejoli-xendit')
         );
@@ -401,6 +407,20 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         ];
                         break;
 
+                    case 'BJB' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/bjb-logo.svg'
+                        ];
+                        break;
+
+                    case 'CIMB' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/cimb-logo.svg'
+                        ];
+                        break;
+
                     case 'PERMATA' :
                         $options[$key] = [
                             'label' => $this->method_options[$_method],
@@ -468,6 +488,34 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         $options[$key] = [
                             'label' => $this->method_options[$_method],
                             'image' => $image_source_url.'img/linkaja-logo.svg'
+                        ];
+                        break;
+
+                    case 'ASTRAPAY' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/astrapay-logo.svg'
+                        ];
+                        break;
+
+                    case 'JENIUSPAY' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/jenius-logo.svg'
+                        ];
+                        break;
+
+                    case 'AKULAKU' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/akulaku-logo.svg'
+                        ];
+                        break;
+
+                    case 'KREDIVO' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/kredivo-logo.svg'
                         ];
                         break;
 
