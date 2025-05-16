@@ -64,7 +64,9 @@ final class SejoliXendit extends \SejoliSA\Payment{
             'BCA'               => __('Bank Central Asia (Virtual Account)', 'sejoli-xendit'),
             'BNI'               => __('Bank Negara Indonesia (Virtual Account)', 'sejoli-xendit'),
             'MANDIRI'           => __('Bank Mandiri (Virtual Account)', 'sejoli-xendit'),
+            'BJB'               => __('Bank BJB (Virtual Account)', 'sejoli-xendit'),
             'PERMATA'           => __('Bank Permata (Virtual Account)', 'sejoli-xendit'),
+            'CIMB'              => __('Bank CIMB (Virtual Account)', 'sejoli-xendit'),
             'SAHABAT_SAMPOERNA' => __('Bank Sahabat Sampoerna (Virtual Account)', 'sejoli-xendit'),
             'BRI'               => __('Bank Rakyat Indonesia (Virtual Account)', 'sejoli-xendit'),
             'BSI'               => __('Bank Syariah Indonesia (Virtual Account)', 'sejoli-xendit'),
@@ -74,6 +76,10 @@ final class SejoliXendit extends \SejoliSA\Payment{
             'DANA'              => __('DANA (eWallet)', 'sejoli-xendit'),
             'SHOPEEPAY'         => __('Shopee Pay (eWallet)', 'sejoli-xendit'),
             'LINKAJA'           => __('LinkAja (eWallet)', 'sejoli-xendit'),
+            'ASTRAPAY'          => __('AstraPay (eWallet)', 'sejoli-xendit'),
+            'JENIUSPAY'          => __('JeniusPay (eWallet)', 'sejoli-xendit'),
+            'AKULAKU'           => __('Akulaku (PayLater)', 'sejoli-xendit'),
+            'KREDIVO'           => __('Kredivo (PayLater)', 'sejoli-xendit'),
             'QRIS'              => __('QRIS Code', 'sejoli-xendit'),
             'CREDIT_CARD'       => __('Credit Card', 'sejoli-xendit')
         );
@@ -401,6 +407,20 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         ];
                         break;
 
+                    case 'BJB' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/bjb-logo.svg'
+                        ];
+                        break;
+
+                    case 'CIMB' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/cimb-logo.svg'
+                        ];
+                        break;
+
                     case 'PERMATA' :
                         $options[$key] = [
                             'label' => $this->method_options[$_method],
@@ -468,6 +488,34 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         $options[$key] = [
                             'label' => $this->method_options[$_method],
                             'image' => $image_source_url.'img/linkaja-logo.svg'
+                        ];
+                        break;
+
+                    case 'ASTRAPAY' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/astrapay-logo.svg'
+                        ];
+                        break;
+
+                    case 'JENIUSPAY' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/jenius-logo.svg'
+                        ];
+                        break;
+
+                    case 'AKULAKU' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/akulaku-logo.svg'
+                        ];
+                        break;
+
+                    case 'KREDIVO' :
+                        $options[$key] = [
+                            'label' => $this->method_options[$_method],
+                            'image' => $image_source_url.'img/kredivo-logo.svg'
                         ];
                         break;
 
@@ -603,8 +651,13 @@ final class SejoliXendit extends \SejoliSA\Payment{
             
             $receiver_destination_id   = $order['user']->data->meta->destination;
             $receiver_destination_city = sejolise_get_subdistrict_detail( $receiver_destination_id );
-            $receiver_city             = $receiver_destination_city['type'].' '.$receiver_destination_city['city'];
-            $receiver_province         = $receiver_destination_city['province'];
+            if (isset($receiver_destination_city) && is_array($receiver_destination_city)) :
+                $receiver_city         = $receiver_destination_city['type'].' '.$receiver_destination_city['city'];
+                $receiver_province     = $receiver_destination_city['province'];
+            else:
+                $receiver_city         = '';
+                $receiver_province     = '';
+            endif;
             $shipping_cost             = 0.00;
             $recipient_name            = $order['user']->data->display_name;
             $recipient_address         = $order['user']->data->meta->address;
@@ -612,8 +665,6 @@ final class SejoliXendit extends \SejoliSA\Payment{
             $subtotal                  = $product_price; 
         
         }
-        
-        $detail = unserialize( $data_order );
 
         if( NULL === $data_order ) :
             
@@ -621,6 +672,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
         
         else :
 
+            $detail = unserialize( $data_order->detail );
             if( !isset( $detail['invoice_url'] ) || empty( $detail['invoice_url'] ) ) :
                 $request_to_xendit = true;
             else :
@@ -629,6 +681,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
         endif;
 
+        $previx_refference = carbon_get_theme_option('xendit_inv_prefix');
+
         if( true === $request_to_xendit ) :
 
             $this->add_to_table( $order['ID'] );
@@ -636,7 +690,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
             if ( !empty( $secret_key ) ) {
 
                 $set_params = [ 
-                    'external_id'      => 'sejoli_'.$signature,
+                    'external_id'      => $previx_refference.$signature,
                     'amount'           => $payment_amount,
                     'description'      => __('Payment for Order No ', 'sejoli-xendit') . $order['ID'],
                     'payer_email'      => $order['user']->user_email,
@@ -705,13 +759,12 @@ final class SejoliXendit extends \SejoliSA\Payment{
                     ]
                 ];
 
-                $params = json_encode($set_params);
-
+                $params             = json_encode($set_params);
                 $executeTransaction = $this->executeTransaction( $request_url, $params, $secret_key, $public_key );
+                $inv_url            = array_key_exists('invoice_url', $executeTransaction) ? $executeTransaction['invoice_url'] : null;
+                $invoice_url        = isset($executeTransaction) ? $inv_url : '';
 
-                $invoice_url = $executeTransaction['invoice_url'];
-
-                if ( $invoice_url !== NULL ) {
+                if ( $invoice_url ) {
 
                     $http_code = 200;
 
@@ -731,24 +784,11 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 else :
 
                     do_action( 'sejoli/log/write', 'error-xendit', array( $executeTransaction, $http_code, $params ) );
-
-                    $msg = $executeTransaction['msg'];
-
-                    if ( $msg === NULL ) {
                         
-                        wp_die(
-                            __('Error!<br>Please check the following : ' . $executeTransaction, 'sejoli-xendit'),
-                            __('Error!', 'sejoli-xendit')
-                        );
-
-                    } else {
-                        
-                        wp_die(
-                            __('Error!<br>Please check the following : ' . $msg, 'sejoli-xendit'),
-                            __('Error!', 'sejoli-xendit')
-                        );
-                        
-                    }
+                    wp_die(
+                        __('Error!<br> Please check the following : ' . '<pre>' . var_export( $executeTransaction, true ) . '</pre>', 'sejoli-xendit'),
+                        __('Error!', 'sejoli-xendit')
+                    );
 
                     exit;
             
@@ -772,25 +812,27 @@ final class SejoliXendit extends \SejoliSA\Payment{
      * @param   int     $order_id
      * @return  void
      */
-    protected function update_order_status($order_id) {
+    protected function update_order_status_by_payment($order_id, $status) {
 
         $respond = sejolisa_get_order(['ID' => $order_id]);
 
         if(false !== $respond['valid']) :
+            
             $order   = $respond['orders'];
             $product = sejolisa_get_product($order['product_id']);
-            $status  = ('digital' === $product->type) ? 'completed' : 'in-progress';
 
             do_action('sejoli/order/update-status',[
                 'ID'       => $order['ID'],
                 'status'   => $status
             ]);
+
         endif;
+
     }
 
     /**
      * Receive return process
-     * @since   1.0.0
+       @since   1.0.0
      * @return  void
      */
     protected function receive_return() {
@@ -831,18 +873,18 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
                         // if product is need of shipment
                         if( 'physical' === $product->type ) :
-                            $set_status = 'in-progress';
+                            $status = 'in-progress';
                         else :
-                            $set_status = 'completed';
+                            $status = 'completed';
                         endif;
 
                         sejolisa_update_order_meta_data($order_id, array(
                             'xendit' => array(
-                                'status' => esc_attr($set_status)
+                                'status' => esc_attr($status)
                             )
                         ));
 
-                        $this->update_order_status( $order_id );
+                        $this->update_order_status_by_payment( $order_id, $status );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -850,6 +892,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         ), site_url('checkout/thank-you')));
                         
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
+
+                        exit;
 
                     else :
 
@@ -861,38 +905,42 @@ final class SejoliXendit extends \SejoliSA\Payment{
                     
                     $order_id = intval($args['order_id']);
 
-                    $set_status = 'cancelled';
+                    $status = 'cancelled';
 
                     sejolisa_update_order_meta_data($order_id, array(
                         'xendit' => array(
-                            'status' => esc_attr($set_status)
+                            'status' => esc_attr($status)
                         )
                     ));
 
-                    $this->update_order_status( $order_id );
+                    $this->update_order_status_by_payment( $order_id, $status );
 
                     wp_redirect(add_query_arg(array(
                         'order_id' => $order_id,
                         'status'   => "failed"
                     ), site_url('checkout/thank-you')));
+
+                    exit;
                     
                 } else {
                     
                     $order_id   = intval($args['order_id']);
-                    $set_status = 'on-hold';
+                    $status = 'on-hold';
 
                     sejolisa_update_order_meta_data($order_id, array(
                         'xendit' => array(
-                            'status' => esc_attr($set_status)
+                            'status' => esc_attr($status)
                         )
                     ));
 
-                    $this->update_order_status( $order_id );
+                    $this->update_order_status_by_payment( $order_id, $status );
 
                     wp_redirect(add_query_arg(array(
                         'order_id' => $order_id,
                         'status'   => "pending"
                     ), site_url('checkout/thank-you')));
+
+                    exit;
                         
                 }
 
@@ -957,7 +1005,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        $this->update_order_status( $order_id );
+                        $this->update_order_status_by_payment( $order_id, $status );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -965,6 +1013,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         ), site_url('checkout/thank-you')));
                             
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
+
+                        exit;
 
                     else :
 
@@ -989,7 +1039,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
 
-                        $this->update_order_status( $order_id );
+                        $this->update_order_status_by_payment( $order_id, $status );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -997,6 +1047,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         ), site_url('checkout/thank-you')));
 
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
+
+                        exit;
 
                     else :
 
@@ -1021,7 +1073,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                             )
                         ));
                         
-                        $this->update_order_status( $order_id );
+                        $this->update_order_status_by_payment( $order_id, $status );
 
                         wp_redirect(add_query_arg(array(
                             'order_id' => $order_id,
@@ -1029,6 +1081,8 @@ final class SejoliXendit extends \SejoliSA\Payment{
                         ), site_url('checkout/thank-you')));
                             
                         do_action( 'sejoli/log/write', 'xendit-update-order', $args );
+
+                        exit;
 
                     else :
 
@@ -1097,6 +1151,38 @@ final class SejoliXendit extends \SejoliSA\Payment{
     }
 
     /**
+     * Get email content from given template
+     * @since   1.0.0
+     * @param   string      $filename   The filename of notification
+     * @param   string      $media      Notification media, default will be email
+     * @param   null|array  $args       Parsing variables
+     * @return  null|string
+     */
+    function sejoli_xendit_get_notification_content( $filename, $media = 'email', $vars = NULL ) {
+        
+        $content    = NULL;
+        $email_file = plugin_dir_path( __FILE__ ) . '/template/'.$media.'/' . $filename . '.php';
+
+        if( file_exists( $email_file ) ) :
+
+            if( is_array( $vars ) ) :
+                extract( $vars );
+            endif;
+
+            ob_start();
+           
+            require $email_file;
+            $content = ob_get_contents();
+           
+            ob_end_clean();
+            
+        endif;
+
+        return $content;
+
+    }
+
+    /**
      * Display payment instruction in notification
      * @since   1.0.0
      * @param   array    $invoice_data
@@ -1111,7 +1197,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
 
         endif;
 
-        $content = sejoli_get_notification_content(
+        $content = $this->sejoli_xendit_get_notification_content(
                         'xendit',
                         $media,
                         array(

@@ -9,7 +9,7 @@
  * Plugin Name:       Sejoli - XENDIT Payment Gateway
  * Plugin URI:        https://sejoli.co.id
  * Description:       Integrate Sejoli Premium WordPress Membership Plugin with XENDIT Payment Gateway.
- * Version:           1.0.1
+ * Version:           1.0.5
  * Requires PHP: 	  7.4.1
  * Author:            Sejoli
  * Author URI:        https://sejoli.co.id
@@ -35,7 +35,7 @@ add_filter('sejoli/payment/available-libraries', function( array $libraries ) {
 
 });
 
-add_action( 'plugins_loaded', 'sejoli_xendit_plugin_init' );
+add_action( 'init', 'sejoli_xendit_plugin_init' );
 function sejoli_xendit_plugin_init() {
 
     load_plugin_textdomain( 'sejoli-xendit', false, dirname(plugin_basename(__FILE__)).'/languages/' );
