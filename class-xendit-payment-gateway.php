@@ -252,6 +252,11 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 $this->is_called = true;
                 $this->receive_return();
 
+            elseif( 'webhook' === $wp_query->query_vars['action'] ) :
+
+                $this->is_called = true;
+                $this->process_webhook();
+
             endif;
 
         endif;
@@ -335,6 +340,37 @@ final class SejoliXendit extends \SejoliSA\Payment{
                     'value' => 'live'
                 )
             )),
+
+            Field::make('text', 'xendit_webhook_verification_token', __('Xendit Webhook Verification Token', 'sejoli-xendit'))
+            ->set_required(true)
+            ->set_help_text(__('Obtain your token webhook verification from your Xendit dashboard <a href="https://dashboard.xendit.co/settings/developers#webhooks" target="blank"> here</a>.', 'sejoli-xendit'))
+            ->set_conditional_logic(array(
+                array(
+                    'field' => 'xendit_active',
+                    'value' => true
+                )
+            )),
+
+            Field::make('separator', 'sep_xendit_callback', __('Webhook URL', 'sejoli'))
+                ->set_conditional_logic(array(
+                    array(
+                        'field' => 'xendit_active',
+                        'value' => true
+                    )
+                )),
+
+            Field::make('html',  'xendit_url_callback',    __('Webhook URL', 'sejoli'))
+                ->set_html(
+                    'Copy Webhook URL berikut ke setup dashboard xendit.com anda : <br />'.
+                    '<strong>'. site_url('/xendit/webhook') . '</strong>'
+                )
+                ->set_conditional_logic(array(
+                    array(
+                        'field' => 'xendit_active',
+                        'value' => true
+                    )
+                )),
+
 
             Field::make('set', 'xendit_payment_method', __('Metode Pembayaran', 'sejoli-xendit'))
             ->set_required(true)  
@@ -573,6 +609,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
         $mode            = carbon_get_theme_option('xendit_mode');
         $secret_key      = trim( carbon_get_theme_option('xendit_secret_key_'.$mode) );
         $public_key      = trim( carbon_get_theme_option('xendit_public_key_'.$mode) );
+        $webhook_verification_token = trim( carbon_get_theme_option('xendit_webhook_verification_token') );
         $payment_method  = carbon_get_theme_option('xendit_payment_method');
         $base_url        = $this->base_url[$mode];
 
@@ -580,6 +617,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
             'mode'           => $mode,
             'secret_key'     => $secret_key,
             'public_key'     => $public_key,
+            'webhook_verification_token' => $webhook_verification_token,
             'payment_method' => $payment_method,
             'base_url'       => $base_url
         );
@@ -692,7 +730,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 $set_params = [ 
                     'external_id'      => $previx_refference.$signature,
                     'amount'           => $payment_amount,
-                    'description'      => __('Payment for Order No ', 'sejoli-xendit') . $order['ID'],
+                    'description'      => __('Payment for Order No #', 'sejoli-xendit') . $order['ID'],
                     'payer_email'      => $order['user']->user_email,
                     'invoice_duration' => 86400,
                     'customer' => [
@@ -777,7 +815,7 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 if( 200 === $http_code ) :
 
                     do_action( 'sejoli/log/write', 'success-xendit', $executeTransaction );
-
+                    $executeTransaction['order_id'] = $order['ID'];
                     $this->update_detail( $order['ID'], $executeTransaction );
                     $redirect_link = $invoice_url;
 
@@ -981,7 +1019,6 @@ final class SejoliXendit extends \SejoliSA\Payment{
                 $public_key = '';
                 $getTransaction = $this->getTransaction( $request_url, $params, $secret_key, $public_key );
 
-
                 if ($getTransaction['status'] === 'PAID' || $getTransaction['status'] === 'COMPLETED' || $getTransaction['status'] === 'SETTLED') :
 
                     $order_id = intval( $args['order_id'] );
@@ -1104,6 +1141,99 @@ final class SejoliXendit extends \SejoliSA\Payment{
         endif;
 
         exit;
+
+    }
+
+    /**
+     * Process webhook from xendit
+     * @since   1.0.0
+     * @return  void
+     */
+    protected function process_webhook() {
+
+        extract( $this->get_setup_values() );
+
+        $xenditXCallbackToken = $webhook_verification_token;
+
+        $xIncomingCallbackTokenHeader = $_SERVER['HTTP_X_CALLBACK_TOKEN'] ?? '';
+
+        if ($xIncomingCallbackTokenHeader === $xenditXCallbackToken) :
+            $rawRequestInput = file_get_contents("php://input");
+            $arrRequestInput = json_decode($rawRequestInput, true);
+
+            $rawRequestInput = file_get_contents("php://input");
+            $arrRequestInput = json_decode($rawRequestInput, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) :
+                error_log("Invalid JSON: " . json_last_error_msg());
+                http_response_code(400);
+                exit("Invalid JSON");
+            endif;
+
+            $_id = $arrRequestInput['id'];
+            $_externalId = $arrRequestInput['external_id'];
+            $_status = $arrRequestInput['status'];
+            $_paidAmount = $arrRequestInput['paid_amount'];
+            $_paidAt = $arrRequestInput['paid_at'];
+            $_orderID = $arrRequestInput['description'];
+
+            $order_number = 0;
+            if (preg_match('/#(\d+)/', $_orderID, $matches)) :
+                $order_number = $matches[1];
+            endif;
+
+            // Proses data callback
+            try {
+                $this->process_webhook_data($_id, $_externalId, $_status, $_paidAmount, $_paidAt, $order_number);
+            } catch (Exception $e) {
+                error_log("Webhook error: " . $e->getMessage());
+                http_response_code(500);
+                exit("Webhook process error");
+            }
+        else:
+            http_response_code(403);
+            die("Forbidden: Invalid callback token");
+        endif;
+
+    }
+
+    protected function process_webhook_data($_id, $_externalId, $_status, $_paidAmount, $_paidAt, $_orderID) {
+
+        $order_id = $_orderID;
+
+        if ($order_id) :
+            $order = sejolisa_get_order(['ID' => $order_id]);
+
+            if ($order['valid'] !== false) :
+                switch ($_status) {
+                    case 'PAID':
+                        $status = 'completed';
+                        break;
+                    case 'EXPIRED':
+                        $status = 'cancelled';
+                        break;
+                    case 'PENDING':
+                        $status = 'on-hold';
+                        break;
+                    default:
+                        $status = 'pending';
+                        break;
+                }
+
+                sejolisa_update_order_meta_data($order_id, [
+                    'xendit' => [
+                        'status' => esc_attr($status),
+                        'paid_amount' => $_paidAmount,
+                        'paid_at' => $_paidAt,
+                    ]
+                ]);
+
+                $this->update_order_status_by_payment($order_id, $status);
+            endif;
+        else:
+            do_action('sejoli/log/write', 'xendit-wrong-order', ['external_id' => $_externalId]);
+            http_response_code(404);
+        endif;
 
     }
 
