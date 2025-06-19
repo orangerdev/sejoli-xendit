@@ -91,6 +91,16 @@ final class SejoliXendit extends \SejoliSA\Payment{
         add_action('init',                           [$this, 'set_endpoint'],       1);
         add_action('parse_query',                    [$this, 'check_parse_query'],  100);
 
+        add_action('template_redirect', function () {
+            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+
+            if (stripos($request_uri, '/xendit/webhook') !== false) {
+                // Hentikan script selanjutnya tapi tetap izinkan load normal
+                remove_all_actions('template_redirect', 100);
+            }
+        }, 1);
+
+
     }
 
     /**
@@ -1158,9 +1168,6 @@ final class SejoliXendit extends \SejoliSA\Payment{
         $xIncomingCallbackTokenHeader = $_SERVER['HTTP_X_CALLBACK_TOKEN'] ?? '';
 
         if ($xIncomingCallbackTokenHeader === $xenditXCallbackToken) :
-            $rawRequestInput = file_get_contents("php://input");
-            $arrRequestInput = json_decode($rawRequestInput, true);
-
             $rawRequestInput = file_get_contents("php://input");
             $arrRequestInput = json_decode($rawRequestInput, true);
 
